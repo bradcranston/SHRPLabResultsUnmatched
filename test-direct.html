@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Test - Performing Site & Medical Director</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; margin: 5px; }
+        button:hover { background: #005a87; }
+        .success { color: green; }
+        .error { color: red; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>Direct Test - Performing Site & Medical Director</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="testWithSampleData()">Test with Sample HL7 Data</button>
+        <button onclick="openMainInterface()">Open Main Interface</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="test-results">Click "Test with Sample HL7 Data" to see results.</div>
+    </div>
+
+    <script type="module">
+        import HL7Parser from './src/hl7-parser.js';
+
+        window.testWithSampleData = async function() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div>Loading sample data...</div>';
+            
+            try {
+                const parser = new HL7Parser();
+                
+                // Load the sample HL7 file
+                const response = await fetch('./sample.hl7');
+                const hl7Content = await response.text();
+                
+                // Parse the HL7 content
+                const parsedData = parser.parseHL7String(hl7Content);
+                
+                console.log('Parsed data:', parsedData);
+                
+                // Simulate the lab info rendering logic from index.js
+                const msh = parsedData.MSH || {};
+                let performingSite = 'N/A';
+                let performingSiteAddress = 'N/A';
+                let medicalDirector = 'N/A';
+                
+                if (parsedData.OBR && parsedData.OBR.length > 0) {
+                    const firstOBR = parsedData.OBR[0];
+                    if (firstOBR.OBX && firstOBR.OBX.length > 0) {
+                        const firstOBX = firstOBR.OBX[0];
+                        if (firstOBX.PerformingOrganizationName && firstOBX.PerformingOrganizationName !== 'N/A') {
+                            performingSite = firstOBX.PerformingOrganizationName;
+                        }
+                        if (firstOBX.PerformingOrganizationAddressParsed && firstOBX.PerformingOrganizationAddressParsed !== 'N/A') {
+                            performingSiteAddress = firstOBX.PerformingOrganizationAddressParsed;
+                        }
+                        if (firstOBX.MedicalDirectorName && firstOBX.MedicalDirectorName !== 'N/A') {
+                            medicalDirector = firstOBX.MedicalDirectorName;
+                        }
+                    }
+                }
+                
+                // Create the test results HTML
+                let html = '<div class="success">✓ Parsing completed successfully!</div>';
+                
+                html += '<div class="result">';
+                html += '<h3>Laboratory Information (as would appear in interface):</h3>';
+                html += `<strong>Sending Facility:</strong> ${msh.SendingFacility || 'N/A'}<br>`;
+                html += `<strong>Sending Application:</strong> ${msh.SendingApp || 'N/A'}<br>`;
+                html += `<strong>Performing Laboratory:</strong> ${performingSite}<br>`;
+                html += `<strong>Laboratory Address:</strong> ${performingSiteAddress}<br>`;
+                html += `<strong>Medical Director:</strong> ${medicalDirector}<br>`;
+                html += '</div>';
+                
+                // Show raw data for debugging
+                if (parsedData.OBR && parsedData.OBR.length > 0 && parsedData.OBR[0].OBX && parsedData.OBR[0].OBX.length > 0) {
+                    const firstOBX = parsedData.OBR[0].OBX[0];
+                    html += '<div class="result">';
+                    html += '<h3>Raw OBX Fields (for debugging):</h3>';
+                    html += `<strong>Field 15 (Raw):</strong> ${firstOBX.PerformingOrganization}<br>`;
+                    html += `<strong>Field 16 (Raw):</strong> ${firstOBX.PerformingOrganizationAddress}<br>`;
+                    html += `<strong>Field 17 (Raw):</strong> ${firstOBX.MedicalDirector}<br>`;
+                    html += '</div>';
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        };
+
+        window.openMainInterface = function() {
+            window.open('./index.html', '_blank');
+        };
+    </script>
+</body>
+</html>

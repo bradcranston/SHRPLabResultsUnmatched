@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Performing Site and Medical Director</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .detail-item { margin: 10px 0; }
+        .detail-label { font-weight: bold; display: inline-block; width: 200px; }
+        .detail-value { display: inline-block; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test Performing Site and Medical Director Parsing</h1>
+    
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Lab Information</h2>
+        <div id="lab-info-test"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Raw OBX Data</h2>
+        <div id="raw-obx-data"></div>
+    </div>
+
+    <script type="module">
+        import HL7Parser from './src/hl7-parser.js';
+
+        async function testParsing() {
+            try {
+                const parser = new HL7Parser();
+                
+                // Load the sample HL7 file
+                const response = await fetch('./sample.hl7');
+                const hl7Content = await response.text();
+                
+                // Parse the HL7 content
+                const parsedData = parser.parseHL7String(hl7Content);
+                
+                console.log('Parsed data:', parsedData);
+                
+                // Test the parsing results
+                const testResults = document.getElementById('test-results');
+                
+                if (parsedData.OBR && parsedData.OBR.length > 0) {
+                    const firstOBR = parsedData.OBR[0];
+                    if (firstOBR.OBX && firstOBR.OBX.length > 0) {
+                        const firstOBX = firstOBR.OBX[0];
+                        
+                        testResults.innerHTML = `
+                            <div class="detail-item success">✓ OBX data found</div>
+                            <div class="detail-item">
+                                <span class="detail-label">Performing Organization (Raw):</span>
+                                <span class="detail-value">${firstOBX.PerformingOrganization || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Performing Organization (Parsed):</span>
+                                <span class="detail-value">${firstOBX.PerformingOrganizationName || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Organization Address (Raw):</span>
+                                <span class="detail-value">${firstOBX.PerformingOrganizationAddress || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Organization Address (Parsed):</span>
+                                <span class="detail-value">${firstOBX.PerformingOrganizationAddressParsed || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Medical Director (Raw):</span>
+                                <span class="detail-value">${firstOBX.MedicalDirector || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Medical Director (Parsed):</span>
+                                <span class="detail-value">${firstOBX.MedicalDirectorName || 'N/A'}</span>
+                            </div>
+                        `;
+                        
+                        // Test lab info rendering
+                        const msh = parsedData.MSH || {};
+                        let performingSite = 'N/A';
+                        let performingSiteAddress = 'N/A';
+                        let medicalDirector = 'N/A';
+                        
+                        if (firstOBX.PerformingOrganizationName && firstOBX.PerformingOrganizationName !== 'N/A') {
+                            performingSite = firstOBX.PerformingOrganizationName;
+                        }
+                        if (firstOBX.PerformingOrganizationAddressParsed && firstOBX.PerformingOrganizationAddressParsed !== 'N/A') {
+                            performingSiteAddress = firstOBX.PerformingOrganizationAddressParsed;
+                        }
+                        if (firstOBX.MedicalDirectorName && firstOBX.MedicalDirectorName !== 'N/A') {
+                            medicalDirector = firstOBX.MedicalDirectorName;
+                        }
+                        
+                        const labInfoTest = document.getElementById('lab-info-test');
+                        labInfoTest.innerHTML = `
+                            <div class="detail-item">
+                                <span class="detail-label">Sending Facility:</span>
+                                <span class="detail-value">${msh.SendingFacility || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Performing Laboratory:</span>
+                                <span class="detail-value">${performingSite}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Laboratory Address:</span>
+                                <span class="detail-value">${performingSiteAddress}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Medical Director:</span>
+                                <span class="detail-value">${medicalDirector}</span>
+                            </div>
+                        `;
+                        
+                        // Show raw OBX data for debugging
+                        const rawObxData = document.getElementById('raw-obx-data');
+                        rawObxData.innerHTML = `<pre>${JSON.stringify(firstOBX, null, 2)}</pre>`;
+                        
+                    } else {
+                        testResults.innerHTML = '<div class="error">✗ No OBX data found in first OBR</div>';
+                    }
+                } else {
+                    testResults.innerHTML = '<div class="error">✗ No OBR data found</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('test-results').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Run the test when the page loads
+        testParsing();
+    </script>
+</body>
+</html>

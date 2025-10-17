@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complete Debug - Step by Step</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .step { margin: 20px 0; padding: 15px; border: 1px solid #ccc; background: #f9f9f9; }
+        .step h3 { margin-top: 0; color: #007cba; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Complete Debug - Step by Step Analysis</h1>
+    
+    <button onclick="runCompleteTest()">Run Complete Test</button>
+    
+    <div id="steps"></div>
+
+    <script type="module">
+        import HL7Parser from './src/hl7-parser.js';
+
+        window.runCompleteTest = async function() {
+            const stepsDiv = document.getElementById('steps');
+            stepsDiv.innerHTML = '';
+            
+            function addStep(title, content, type = 'info') {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'step';
+                stepDiv.innerHTML = `<h3>${title}</h3><div class="${type}">${content}</div>`;
+                stepsDiv.appendChild(stepDiv);
+            }
+
+            try {
+                // Step 1: Load HL7 data
+                addStep('Step 1: Loading HL7 Data', 'Loading sample.hl7...');
+                const response = await fetch('./sample.hl7');
+                const hl7Content = await response.text();
+                addStep('Step 1 Complete', `✓ Loaded ${hl7Content.length} characters`, 'success');
+
+                // Step 2: Parse HL7 data
+                addStep('Step 2: Parsing HL7 Data', 'Initializing parser...');
+                const parser = new HL7Parser();
+                const parsedData = parser.parseHL7String(hl7Content);
+                addStep('Step 2 Complete', '✓ HL7 data parsed successfully', 'success');
+
+                // Step 3: Analyze parsed structure
+                addStep('Step 3: Analyzing Parsed Structure', 
+                    `<pre>OBR segments: ${parsedData.OBR?.length || 0}
+OBX segments total: ${parsedData.OBR?.reduce((total, obr) => total + (obr.OBX?.length || 0), 0) || 0}</pre>`);
+
+                // Step 4: Check first OBX segment
+                if (parsedData.OBR && parsedData.OBR.length > 0 && parsedData.OBR[0].OBX && parsedData.OBR[0].OBX.length > 0) {
+                    const firstOBX = parsedData.OBR[0].OBX[0];
+                    addStep('Step 4: First OBX Analysis', 
+                        `<pre>PerformingOrganization: ${firstOBX.PerformingOrganization || 'undefined'}
+PerformingOrganizationName: ${firstOBX.PerformingOrganizationName || 'undefined'}
+PerformingOrganizationAddress: ${firstOBX.PerformingOrganizationAddress || 'undefined'}
+PerformingOrganizationAddressParsed: ${firstOBX.PerformingOrganizationAddressParsed || 'undefined'}
+MedicalDirector: ${firstOBX.MedicalDirector || 'undefined'}
+MedicalDirectorName: ${firstOBX.MedicalDirectorName || 'undefined'}</pre>`, 
+                        firstOBX.PerformingOrganizationName ? 'success' : 'error');
+                } else {
+                    addStep('Step 4: First OBX Analysis', '✗ No OBX segments found', 'error');
+                }
+
+                // Step 5: Test parsing functions directly
+                addStep('Step 5: Testing Parsing Functions', 'Testing helper functions...');
+                
+                // Get raw OBX line for testing
+                const obxLines = hl7Content.split('\n').filter(line => line.startsWith('OBX|1|'));
+                if (obxLines.length > 0) {
+                    const obxLine = obxLines[0];
+                    const fields = obxLine.split('|');
+                    
+                    const field15 = fields[15] || '';
+                    const field16 = fields[16] || '';
+                    const field17 = fields[17] || '';
+                    
+                    const orgName = parser.parsePerformingOrganization(field15);
+                    const orgAddress = parser.parsePerformingOrganizationAddress(field16);
+                    const medDirector = parser.parseMedicalDirector(field17);
+                    
+                    addStep('Step 5 Results', 
+                        `<pre>Raw Field 15: ${field15}
+Parsed Org Name: ${orgName}
+
+Raw Field 16: ${field16}
+Parsed Address: ${orgAddress}
+
+Raw Field 17: ${field17}
+Parsed Director: ${medDirector}</pre>`, 
+                        (orgName !== 'N/A' && orgAddress !== 'N/A' && medDirector !== 'N/A') ? 'success' : 'warning');
+                } else {
+                    addStep('Step 5 Results', '✗ No OBX lines found in HL7 data', 'error');
+                }
+
+                // Step 6: Simulate renderLabInfo function
+                addStep('Step 6: Simulating Lab Info Rendering', 'Running renderLabInfo logic...');
+                
+                const msh = parsedData.MSH || {};
+                let performingSite = 'N/A';
+                let performingSiteAddress = 'N/A';
+                let medicalDirector = 'N/A';
+                
+                if (parsedData.OBR && parsedData.OBR.length > 0) {
+                    const firstOBR = parsedData.OBR[0];
+                    if (firstOBR.OBX && firstOBR.OBX.length > 0) {
+                        const firstOBX = firstOBR.OBX[0];
+                        if (firstOBX.PerformingOrganizationName && firstOBX.PerformingOrganizationName !== 'N/A') {
+                            performingSite = firstOBX.PerformingOrganizationName;
+                        }
+                        if (firstOBX.PerformingOrganizationAddressParsed && firstOBX.PerformingOrganizationAddressParsed !== 'N/A') {
+                            performingSiteAddress = firstOBX.PerformingOrganizationAddressParsed;
+                        }
+                        if (firstOBX.MedicalDirectorName && firstOBX.MedicalDirectorName !== 'N/A') {
+                            medicalDirector = firstOBX.MedicalDirectorName;
+                        }
+                    }
+                }
+                
+                const labDetails = [
+                    { label: 'Sending Facility', value: msh.SendingFacility || 'N/A' },
+                    { label: 'Sending Application', value: msh.SendingApp || 'N/A' },
+                    { label: 'Performing Laboratory', value: performingSite },
+                    { label: 'Laboratory Address', value: performingSiteAddress },
+                    { label: 'Medical Director', value: medicalDirector },
+                    { label: 'Report Date/Time', value: msh.DateTime || 'N/A' },
+                    { label: 'Message Control ID', value: msh.MessageControlID || 'N/A' },
+                    { label: 'Processing ID', value: msh.ProcessingID || 'N/A' },
+                    { label: 'Version', value: msh.Version || 'N/A' }
+                ];
+
+                const hasNewData = performingSite !== 'N/A' || performingSiteAddress !== 'N/A' || medicalDirector !== 'N/A';
+                
+                addStep('Step 6 Results', 
+                    `<pre>Final Lab Details:
+${labDetails.map(d => `${d.label}: ${d.value}`).join('\n')}</pre>`, 
+                    hasNewData ? 'success' : 'error');
+
+                // Step 7: Summary
+                const summary = hasNewData ? 
+                    '✓ SUCCESS: Performing site and medical director data found and parsed correctly!' :
+                    '✗ ISSUE: Performing site and medical director data not being extracted properly';
+                    
+                addStep('Step 7: Final Summary', summary, hasNewData ? 'success' : 'error');
+                
+            } catch (error) {
+                addStep('ERROR', `Error during testing: ${error.message}`, 'error');
+                console.error('Test error:', error);
+            }
+        };
+    </script>
+</body>
+</html>

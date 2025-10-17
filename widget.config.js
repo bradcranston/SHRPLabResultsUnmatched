@@ -1,7 +1,7 @@
 module.exports = {
-  widgetName: "jsDev",
+  widgetName: "AEGISResultUnmatched",
   server: "$",
-  file: "jsDev",
+  file: "ClarkEHR",
   uploadScript: "UploadToHTML",
   reloadScript: "Load Widget",
   startDevScript: "Set to Dev Mode",

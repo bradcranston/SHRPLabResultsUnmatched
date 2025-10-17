@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Field Position Debug</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .field { margin: 2px 0; padding: 3px; }
+        .important { background: yellow; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>OBX Field Position Analysis</h1>
+    
+    <script>
+        // The actual OBX line from sample.hl7
+        const obxLine = 'OBX|1|ST|21613-5^C trach DNA Spec Ql NAA+probe^LN^Chlamydia t^Chlamydia trachomatis^L||NEGATIVE||NOT PRESENT|N|||F|||20250826080500|||||20250826140822||||Aegis Sciences Corporation^^^^^CLIA&2.16.840.1.113883.3.8748&ISO^XX^^^44D2062333|501 Great Circle Road^^Nashville^TN^37228|^Hardison^Matthew^T^PhD';
+        
+        const fields = obxLine.split('|');
+        
+        let html = '<h2>All Fields:</h2>';
+        
+        fields.forEach((field, index) => {
+            const isImportant = (index >= 15 && index <= 17) || 
+                               field.includes('Aegis Sciences Corporation') || 
+                               field.includes('Great Circle Road') || 
+                               field.includes('Hardison');
+            
+            html += `<div class="field ${isImportant ? 'important' : ''}">`;
+            html += `Field ${index}: ${field || '(empty)'}`;
+            html += `</div>`;
+        });
+        
+        html += '<h2>Key Findings:</h2>';
+        html += `<div>Total fields: ${fields.length}</div>`;
+        
+        // Find the actual positions
+        let performingOrgField = -1;
+        let addressField = -1;
+        let directorField = -1;
+        
+        fields.forEach((field, index) => {
+            if (field.includes('Aegis Sciences Corporation')) performingOrgField = index;
+            if (field.includes('Great Circle Road')) addressField = index;
+            if (field.includes('Hardison')) directorField = index;
+        });
+        
+        html += `<div class="important">Performing Organization found at field: ${performingOrgField}</div>`;
+        html += `<div class="important">Address found at field: ${addressField}</div>`;
+        html += `<div class="important">Medical Director found at field: ${directorField}</div>`;
+        
+        if (performingOrgField !== -1) {
+            html += `<div>Performing Org content: ${fields[performingOrgField]}</div>`;
+        }
+        if (addressField !== -1) {
+            html += `<div>Address content: ${fields[addressField]}</div>`;
+        }
+        if (directorField !== -1) {
+            html += `<div>Director content: ${fields[directorField]}</div>`;
+        }
+        
+        document.body.innerHTML += html;
+    </script>
+</body>
+</html>

@@ -2,19 +2,117 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <style>
-      @import "./src/style.css";
-    </style>
-    <title>JSDev</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AEGIS Lab Results</title>
+    <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
-    <h1>Alright. You're set.</h1>
-      <h2 class="tintedBlackLeft">Now build something amazing!</h2>
-      <p>JS in FM is amazing</p>
-    <button type="button">Click Me!</button>
+    <div id="app">
 
-    <script type="module">
-      import "./src/index.js";
+      <main class="main-content">
+        <div class="container">
+          <!-- Loading State -->
+          <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Ready for lab results data...</p>
+          </div>
+
+          <!-- Error State -->
+          <div id="error" class="error-message hidden">
+            <h2>⚠️ Error Loading Results</h2>
+            <p id="error-text"></p>
+          </div>
+
+
+
+          <!-- Results Content -->
+          <div id="results-container" class="hidden">
+            <!-- View PDF Button -->
+            <div class="pdf-button-container">
+              <button id="view-pdf-btn" class="view-pdf-button">
+                📄 View PDF Report
+              </button>
+            </div>
+
+            <!-- Patient Information -->
+            <section class="patient-info-card">
+              <h2>👤 Patient Information</h2>
+              <div id="patient-info" class="patient-details"></div>
+            </section>
+
+                        <!-- OBR Information -->
+            <section class="obr-info-card">
+              <h2>📋 Lab Orders & Requests</h2>
+              <div id="obr-info" class="obr-details"></div>
+            </section>
+            
+            <!-- Test Results -->
+            <section class="results-section">
+              <h2>📊 Test Results</h2>
+              <div class="results-tabs">
+                <button class="tab-button active" data-tab="all">All Results</button>
+                <button class="tab-button" data-tab="positive">Positive</button>
+                <button class="tab-button" data-tab="negative">Negative</button>
+                <button class="tab-button" data-tab="non-compliant">Non-Compliant</button>
+              </div>
+              <div id="test-results" class="test-results-grid"></div>
+            </section>
+
+
+
+            <!-- Lab Information -->
+            <section class="lab-info-card">
+              <h2>🏥 Laboratory Information</h2>
+              <div id="lab-info" class="lab-details"></div>
+            </section>
+
+
+
+
+          </div>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <p>&copy; 2025 SHRP Laboratory Results System</p>
+      </footer>
+    </div>
+
+    <script type="module" src="./src/index.js"></script>
+    
+    <!-- Ensure global functions are available immediately for FileMaker -->
+    <script>
+      // Create placeholder functions immediately that FileMaker can call
+      // These will be replaced by the real functions when the module loads
+      window.loadLabResults = window.loadLabResults || function(hl7Data) {
+        return new Promise((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (window.loadLabResults !== arguments.callee) {
+              // Real function has loaded, call it
+              clearInterval(checkInterval);
+              resolve(window.loadLabResults(hl7Data));
+            }
+          }, 100);
+          
+          // Timeout after 10 seconds
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve({ success: false, error: 'Timeout waiting for module to load' });
+          }, 10000);
+        });
+      };
+      
+      window.clearLabResults = window.clearLabResults || function() {
+        return { success: false, error: 'Module not loaded yet' };
+      };
+      
+      window.getLabResultsStatus = window.getLabResultsStatus || function() {
+        return { success: false, error: 'Module not loaded yet' };
+      };
+      
+      window.isLabResultsReady = window.isLabResultsReady || function() {
+        return false;
+      };
     </script>
   </body>
 </html>
